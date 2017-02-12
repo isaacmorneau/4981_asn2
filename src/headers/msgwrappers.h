@@ -4,9 +4,16 @@
 #include <sys/msg.h>
 
 #define BUFFSIZE 1024
+//text of buffsize for use in printf formatting
+#define BUFFSIZETXT "1024"
+
 #define TO_SERVER 1
 //generate a new unlikely id from the client pid
 #define QUIT_CLIENT(x) ((x) ^ ((x) << 6)) 
+
+#define FILE_NOT_FOUND 'N'
+#define FILE_END 'E'
+
 int msgGet(key_t mkey, int flags);
 
 void msgCtl(int msq, int flags, struct msqid_ds *msgStatus = 0);

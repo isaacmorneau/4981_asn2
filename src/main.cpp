@@ -26,7 +26,7 @@ int main(int argc, char *argv[]){
     int priority = 0;
 
     //a file must be entered if running as client
-    string fileRequest;
+    string inFile, outFile;
    
     if(argc == 1){
                 printf("usage %s <options> <args>\n"
@@ -35,14 +35,15 @@ int main(int argc, char *argv[]){
                         "-v - run in verbose mode\n"
                         "-h - this message\n"
                         "-f - the file requested in client mode\n"
+                        "-o - the file to save to in client mode (default stdout)\n"
                         "-k - the key for the message queue\n"
-                        "-p - the priority of the client\n"
+                        "-p - the priority of the client. a positive integer or [l]ow, [m]edium, [h]igh\n"
                         , argv[0]);
                 exit(0);
     }
 
     int opt;
-    while ((opt = getopt(argc, argv, "hcsvk:f:p:")) != -1) {
+    while ((opt = getopt(argc, argv, "hcsvk:f:o:p:")) != -1) {
         switch(opt) {
             case 'c'://client
                 if(isServer){
@@ -58,8 +59,11 @@ int main(int argc, char *argv[]){
                 }
                 isServer = 1;
                 break;
-            case 'f'://file
-                fileRequest = string(optarg);
+            case 'f'://file to get
+                inFile = string(optarg);
+                break;
+            case 'o'://file to put to
+                outFile = string(optarg);
                 break;
             case 'k'://key
                 mkey = static_cast<key_t>(atoi(optarg));
@@ -69,10 +73,23 @@ int main(int argc, char *argv[]){
                 }
                 break;
             case 'p':
-                priority = atoi(optarg);
-                if(priority < 1){
-                    perror("priority must be a positive integer");
-                    exit(1);
+                switch(*optarg){
+                    case 'l'://low
+                        priority = 1;
+                        break;
+                    case 'm'://medium
+                        priority = 10;
+                        break;
+                    case 'h'://high
+                        priority = 100;
+                        break;
+                    default://custom
+                        priority = atoi(optarg);
+                        if(priority < 1){
+                            perror("priority must be a positive integer");
+                            exit(1);
+                        }
+                        break;
                 }
                 break;
             case 'v':
@@ -85,8 +102,9 @@ int main(int argc, char *argv[]){
                         "-v - run in verbose mode\n"
                         "-h - this message\n"
                         "-f - the file requested in client mode\n"
+                        "-o - the file to save to in client mode (default stdout)\n"
                         "-k - the key for the message queue\n"
-                        "-p - the priority of the client\n"
+                        "-p - the priority of the client. a positive integer or [l]ow, [m]edium, [h]igh\n"
                         , argv[0]);
                 exit(0);
                 break;
@@ -105,18 +123,15 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    msqId = msgGet(mkey, IPC_CREAT | 0666);
+    msqId = msgGet(mkey, IPC_CREAT | 0660);
 
     if(isServer) {
         server(msqId, verbose);
-        //only remove the msg queue if you are the server
-        msgCtl(msqId, IPC_RMID);
     } else {
-        client(msqId, fileRequest, priority, verbose);
+        client(msqId, inFile, outFile, priority, verbose);
     }
 
-    //msgCtl(msqId, IPC_STAT, &msqStatus);
-
     // Remove he message queue
+    //msgCtl(msqId, IPC_RMID, 0);
     exit(0);
 }
