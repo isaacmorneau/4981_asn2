@@ -11,12 +11,16 @@ HEADWILD := $(wildcard $(HEAD)/*.h)
 EXEC := $(ODIR)/$(APPNAME)
 DEPS := $(EXEC).d
 
+
 # Add flags for release mode binary
 release: CXXFLAGS += -O3 -march=native -flto -DNDEBUG
-release: debug
+release: alldem
 
-debug: $(patsubst $(SRCOBJS), $(OBJS), $(SRCWILD))
-# Command takes all bin .o files and creates an executable called chess in the bin folder
+debug: CXXFLAGS += -g
+debug: alldem
+
+alldem: $(patsubst $(SRCOBJS), $(OBJS), $(SRCWILD))
+# create exe out of .o files
 	$(CXX) $^ $(CFLAGS) $(CXXFLAGS) $(CLIBS) -o $(EXEC)
 
 $(ODIR):

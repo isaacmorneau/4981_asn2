@@ -24,8 +24,6 @@ int main(int argc, char *argv[]){
     int isServer = 0;
     //a file must be entered if running as client
     string fileRequest;
-    //for storing queue status
-    struct msqid_ds msqStatus;
    
     if(argc == 1){
                 printf("usage %s <options> <args>\n"
@@ -95,7 +93,7 @@ int main(int argc, char *argv[]){
         exit(1);
     }
 
-    msqId = msgGet(mkey, IPC_CREAT);
+    msqId = msgGet(mkey, IPC_CREAT | 0666);
 
     if(isServer) {
         server(msqId);
