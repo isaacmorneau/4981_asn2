@@ -2,7 +2,8 @@
 #include <stdio.h>
 #include <sys/ipc.h>
 #include <sys/msg.h>
-
+#include <sys/types.h>
+#include <errno.h>
 #include "headers/msgwrappers.h"
 
 int msgGet(key_t mkey, int flags){
@@ -28,11 +29,14 @@ void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags){
     }
 }
 
-int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags){
-    int read;
-    if((read = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
+int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read){
+    if((*read = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
+        //no messages to read
+        if(errno == ENOMSG) {
+            return 0;
+        }
         perror("msgrcv failed");
         exit(5);
     }
-    return read;
+    return 1;
 }

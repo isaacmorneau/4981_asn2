@@ -22,6 +22,9 @@ int main(int argc, char *argv[]){
     //verify only one is specified
     int isClient = 0;
     int isServer = 0;
+    //priority of the client
+    int priority = 0;
+
     //a file must be entered if running as client
     string fileRequest;
    
@@ -33,12 +36,13 @@ int main(int argc, char *argv[]){
                         "-h - this message\n"
                         "-f - the file requested in client mode\n"
                         "-k - the key for the message queue\n"
+                        "-p - the priority of the client\n"
                         , argv[0]);
                 exit(0);
     }
 
     int opt;
-    while ((opt = getopt(argc, argv, "hcsvk:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "hcsvk:f:p:")) != -1) {
         switch(opt) {
             case 'c'://client
                 if(isServer){
@@ -64,6 +68,13 @@ int main(int argc, char *argv[]){
                     exit(1);
                 }
                 break;
+            case 'p':
+                priority = atoi(optarg);
+                if(priority < 1){
+                    perror("priority must be a positive integer");
+                    exit(1);
+                }
+                break;
             case 'v':
                 verbose = 1;
                 break;
@@ -75,6 +86,7 @@ int main(int argc, char *argv[]){
                         "-h - this message\n"
                         "-f - the file requested in client mode\n"
                         "-k - the key for the message queue\n"
+                        "-p - the priority of the client\n"
                         , argv[0]);
                 exit(0);
                 break;
@@ -96,14 +108,15 @@ int main(int argc, char *argv[]){
     msqId = msgGet(mkey, IPC_CREAT | 0666);
 
     if(isServer) {
-        server(msqId);
+        server(msqId, verbose);
+        //only remove the msg queue if you are the server
+        msgCtl(msqId, IPC_RMID);
     } else {
-        client(msqId, fileRequest);
+        client(msqId, fileRequest, priority, verbose);
     }
 
     //msgCtl(msqId, IPC_STAT, &msqStatus);
 
     // Remove he message queue
-    msgCtl(msqId, IPC_RMID);
     exit(0);
 }

@@ -4,7 +4,9 @@
 #include <sys/msg.h>
 
 #define BUFFSIZE 1024
-
+#define TO_SERVER 1
+//generate a new unlikely id from the client pid
+#define QUIT_CLIENT(x) ((x) ^ ((x) << 6)) 
 int msgGet(key_t mkey, int flags);
 
 void msgCtl(int msq, int flags, struct msqid_ds *msgStatus = 0);
@@ -14,8 +16,8 @@ struct MsgBuff {
     char mtext[BUFFSIZE];
 };
 
-void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags);
+void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags = 0);
 
-int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags);
+int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read);
 
 #endif
