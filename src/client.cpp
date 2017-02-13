@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <fstream>
+#include <thread>
 #include "headers/client.h"
 #include "headers/msgwrappers.h"
 
@@ -23,32 +24,44 @@ void client(const int msgQueue,
         oFile.open(outFile.c_str(), ios::binary | ios::app);
 
     msg.mtype = TO_SERVER;
-    
+
     sprintf(msg.mtext, "%d %d %s", pid, priority, reqFile.c_str());
-    
+
     msgSnd(msgQueue, &msg, strlen(msg.mtext), IPC_NOWAIT);
-    while(1){
-        //while its sending us messages read them in
-        while(msgRcv(msgQueue, &msg, BUFFSIZE, pid, IPC_NOWAIT, &read)) {
-            //write data to output
-            if(useFile)
-                oFile.write(msg.mtext, read);
-            else
-                //use fwrite because it may be a binary file
-                fwrite(msg.mtext, sizeof(char), read, stdout);
-        }
-        //thats the last message on the queue
-        //non blocking check if the server is done with us
-        if(msgRcv(msgQueue, &msg, BUFFSIZE, QUIT_CLIENT(pid), IPC_NOWAIT, &read)){
-            if(*msg.mtext == FILE_NOT_FOUND) {
-                if(verbose)
-                    printf("recieved 'File Not Found' from server, exiting...\n");
-            } else if (*msg.mtext == FILE_END) {
-                if(verbose)
-                    printf("recieved 'End Of File' from server, exiting...\n");
+    //load up the message loop into a lambda and throw it into a thread
+    thread msgWorker([&]{
+            while(1){
+                //while its sending us messages read them in
+                while(msgRcv(msgQueue, &msg, BUFFSIZE, pid, IPC_NOWAIT, &read)) {
+                    //write data to output
+                    if(useFile)
+                        oFile.write(msg.mtext, read);
+                    else
+                        //use fwrite because it may be a binary file
+                        fwrite(msg.mtext, sizeof(char), read, stdout);
+                }
+                //thats the last message on the queue
+                //non blocking check if the server is done with us
+                if(msgRcv(msgQueue, &msg, BUFFSIZE, QUIT_CLIENT(pid), IPC_NOWAIT, &read)){
+                    switch(*msg.mtext){
+                        case FILE_NOT_FOUND:
+                            if(verbose)
+                                printf("recieved 'File Not Found' from server, exiting...\n");
+                            break;
+                        case FILE_END:
+                            if(verbose)
+                                printf("recieved 'End Of File' from server, exiting...\n");
+                            break;
+                        case INTERUPT_QUIT:
+                            if(verbose)
+                                printf("recieved 'Interupt Quit' from server, exiting...\n");
+                            break;
+                    }
+                    oFile.close();
+                    break;
+                }
             }
-            oFile.close();
-            break;
         }
-    }
+    );
+    msgWorker.join();
 }

@@ -13,6 +13,7 @@
 
 #define FILE_NOT_FOUND 'N'
 #define FILE_END 'E'
+#define INTERUPT_QUIT 'I'
 
 int msgGet(key_t mkey, int flags);
 

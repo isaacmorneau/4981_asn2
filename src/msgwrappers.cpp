@@ -31,8 +31,8 @@ void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags){
 
 int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read){
     if((*read = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
-        //no messages to read
-        if(errno == ENOMSG) {
+        //no messages to read or an interupt stopped us
+        if(errno == ENOMSG || errno == EINTR) {
             return 0;
         }
         perror("msgrcv failed");
