@@ -2,6 +2,7 @@
 #define MSGWRAPPERS_H
 
 #include <sys/msg.h>
+#include <semaphore.h>
 
 #define BUFFSIZE 1024
 //text of buffsize for use in printf formatting
@@ -27,5 +28,12 @@ struct MsgBuff {
 void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags = 0);
 
 int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read);
+
+
+int semGet(key_t key, int value);
+void semSet(int sid, int value);
+void semWait(int sid);
+void semSignal(int sid, int value = 1);
+void semRelease(int sid);
 
 #endif

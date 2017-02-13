@@ -5,7 +5,7 @@
 #include <fstream>
 #include <thread>
 #include "headers/client.h"
-#include "headers/msgwrappers.h"
+#include "headers/wrappers.h"
 
 using namespace std;
 
@@ -27,7 +27,7 @@ void client(const int msgQueue,
 
     sprintf(msg.mtext, "%d %d %s", pid, priority, reqFile.c_str());
 
-    msgSnd(msgQueue, &msg, strlen(msg.mtext), IPC_NOWAIT);
+    msgSnd(msgQueue, &msg, strlen(msg.mtext) + 1, IPC_NOWAIT);
     //load up the message loop into a lambda and throw it into a thread
     thread msgWorker([&]{
             while(1){

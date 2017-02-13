@@ -6,7 +6,7 @@
 #include <unistd.h>
 #include <string>
 
-#include "headers/msgwrappers.h"
+#include "headers/wrappers.h"
 #include "headers/server.h"
 #include "headers/client.h"
 
@@ -126,7 +126,7 @@ int main(int argc, char *argv[]){
     msqId = msgGet(mkey, IPC_CREAT | 0660);
 
     if(isServer) {
-        server(msqId, verbose);
+        server(msqId, mkey, verbose);
     } else {
         client(msqId, inFile, outFile, priority, verbose);
     }

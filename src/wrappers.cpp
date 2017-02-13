@@ -4,7 +4,8 @@
 #include <sys/msg.h>
 #include <sys/types.h>
 #include <errno.h>
-#include "headers/msgwrappers.h"
+#include <sys/sem.h>
+#include "headers/wrappers.h"
 
 int msgGet(key_t mkey, int flags){
     int ret;
@@ -40,3 +41,57 @@ int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read)
     }
     return 1;
 }
+
+int semGet(key_t key, int value){
+    int ret;
+    if((ret = semget(key, value, 0666 | IPC_CREAT)) == -1){
+        perror("semget failed");
+        exit(6);
+    }
+    return ret;
+}
+
+void semSet(int sid, int value){
+
+    if(semctl(sid, 0, SETVAL, value) == -1){
+        perror("semctl failed");
+        exit(7);
+    }
+}
+
+void semWait(int sid){
+    struct sembuf buf[2];
+    buf[0].sem_num = 0;
+    buf[0].sem_op = -1;
+    buf[0].sem_flg = 0;
+
+    buf[1].sem_num = 0;
+    buf[1].sem_op = 0;
+    buf[1].sem_flg = 0;
+    if(semop(sid, buf, 2) == -1){
+        perror("semop wait failed");
+        exit(8);
+    }
+}
+
+void semSignal(int sid, int value){
+    struct sembuf buf[1];
+    buf->sem_num = 0;
+    buf->sem_op = value;
+    buf->sem_flg = 0;
+    if(semop(sid,buf,1) == -1){
+        perror("semop wait failed");
+        exit(8);
+    }
+}
+
+void semRelease(int sid){
+    if(semctl(sid, 0, IPC_RMID, 0) == -1){
+        perror("semctl failed");
+        exit(9);
+    }
+}
+
+
+
+
