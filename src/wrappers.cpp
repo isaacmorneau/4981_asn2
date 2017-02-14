@@ -52,7 +52,6 @@ int semGet(key_t key, int value){
 }
 
 void semSet(int sid, int value){
-
     if(semctl(sid, 0, SETVAL, value) == -1){
         perror("semctl failed");
         exit(7);
@@ -60,15 +59,17 @@ void semSet(int sid, int value){
 }
 
 void semWait(int sid){
-    struct sembuf buf[2];
+    struct sembuf buf[1];
     buf[0].sem_num = 0;
     buf[0].sem_op = -1;
     buf[0].sem_flg = 0;
 
-    buf[1].sem_num = 0;
-    buf[1].sem_op = 0;
-    buf[1].sem_flg = 0;
-    if(semop(sid, buf, 2) == -1){
+    //buf[1].sem_num = 0;
+    //buf[1].sem_op = 0;
+    //buf[1].sem_flg = 0;
+    if(semop(sid, buf, 1) == -1){
+        if(errno == EINTR)
+            return;
         perror("semop wait failed");
         exit(8);
     }
@@ -80,18 +81,29 @@ void semSignal(int sid, int value){
     buf->sem_op = value;
     buf->sem_flg = 0;
     if(semop(sid,buf,1) == -1){
-        perror("semop wait failed");
-        exit(8);
+        if(errno == EINTR)
+            return;
+        perror("semop signal failed");
+        exit(9);
     }
 }
 
 void semRelease(int sid){
     if(semctl(sid, 0, IPC_RMID, 0) == -1){
         perror("semctl failed");
-        exit(9);
     }
 }
 
-
+int semGetValue(int sid){
+    int ret;
+    errno = 0;
+    if((ret = semctl(sid, 0, GETVAL)) == -1){
+        if(errno){
+            perror("semctl get failed");
+            exit(7);
+        }
+    }
+    return ret;
+}
 
 

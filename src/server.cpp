@@ -27,26 +27,26 @@ int sem;
 int verbose = 0;
 
 void interuptRequest(int signal){
-
     switch(signal){
         case SIGINT:
             if(verbose && sharedRunning)
                 printf("\n}Caught interupt, exiting.\n");
+            printf("}semaphore %d\n}slaves %d\n}ready %d\n", semGetValue(sem),slaves, int(slavesReady));
             sharedRunning = 0;
-            break;
-        case SIGUSR1://check when a client says they are waiting
-            //if they are all waiting free it
-            if(++slavesReady == slaves){
-                slavesReady = 0;
-                for(int i = 0; i < slaves; ++i)
-                    semSignal(sem, slaves);//be free!
-            }
-            if(verbose)
-                printf("}resumed %d slaves\n", slaves);
             break;
         case SIGUSR2:
             //decrement total semaphores
             --slaves;
+        case SIGUSR1://check when a client says they are waiting
+            if(++slavesReady >= slaves){
+                slavesReady = 0;
+                for(int i = 0; i < slaves; ++i)
+                    semSignal(sem);//be free!
+                if(verbose)
+                    printf("}resumed %d slaves\n", slaves);
+            }
+            if(slavesReady == 1 && semGetValue(sem) == 0)
+                semSignal(sem);//miss sync from client exit
             break;
     }
 }
@@ -76,7 +76,7 @@ void server(const int msgQueue,const key_t mkey, const int verb){
     sigaction(SIGUSR2, &sa, 0);
 
 
-    semGet(mkey, 1);
+    sem = semGet(mkey, 1);
 
     while(sharedRunning){
         //start off blocking but as soon as there are slave processes be sure to check on them
@@ -172,5 +172,6 @@ void slaveServer(const int msgQueue,
     msg.mtype = QUIT_CLIENT(clientPid);
     *msg.mtext = FILE_END;
     msgSnd(msgQueue, &msg, 1);
+
     kill(parentPid, SIGUSR2);
 }

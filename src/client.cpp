@@ -27,7 +27,7 @@ void client(const int msgQueue,
 
     sprintf(msg.mtext, "%d %d %s", pid, priority, reqFile.c_str());
 
-    msgSnd(msgQueue, &msg, strlen(msg.mtext) + 1, IPC_NOWAIT);
+    msgSnd(msgQueue, &msg, strlen(msg.mtext) + 1);
     //load up the message loop into a lambda and throw it into a thread
     thread msgWorker([&]{
             while(1){

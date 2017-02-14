@@ -35,5 +35,6 @@ void semSet(int sid, int value);
 void semWait(int sid);
 void semSignal(int sid, int value = 1);
 void semRelease(int sid);
+int semGetValue(int sid);
 
 #endif
