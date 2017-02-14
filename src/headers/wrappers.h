@@ -5,12 +5,10 @@
 #include <semaphore.h>
 
 #define BUFFSIZE 1024
-//text of buffsize for use in printf formatting
-#define BUFFSIZETXT "1024"
 
 #define TO_SERVER 1
 //generate a new unlikely id from the client pid
-#define QUIT_CLIENT(x) ((x) ^ ((x) << 6)) 
+#define QUIT_CLIENT(x) ((x) << 8) 
 
 #define FILE_NOT_FOUND 'N'
 #define FILE_END 'E'

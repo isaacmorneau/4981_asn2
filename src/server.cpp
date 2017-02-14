@@ -37,9 +37,6 @@ void interuptRequest(int signal){
             if(!sharedRunning)
                 return;
             if(verbose)
-                printf("sw:%d sv:%d sl:%d\n",
-                        semGetWaiting(semId),semGetValue(semId),int(slaves));
-            if(verbose)
                 printf("\n}Caught interupt, exiting.\n");
             sharedRunning = 0;
             //when the master process exits clean up.
@@ -81,7 +78,7 @@ void server(const int msgQueue, const key_t mkey, const int verb){
 
     while(sharedRunning){
         //start off blocking but as soon as there are slave processes be sure to check on them
-        if(msgRcv(msgId, &msgBuff, BUFFSIZE, TO_SERVER, IPC_NOWAIT, &read)){
+        if(msgRcv(msgId, &msgBuff, BUFFSIZE, TO_SERVER, slaves? IPC_NOWAIT : 0, &read)){
             ++slaves;
             if(!fork()){
                 //clear what the master server is set to handle
