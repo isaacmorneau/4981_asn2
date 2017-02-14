@@ -42,6 +42,13 @@ int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read)
     return 1;
 }
 
+void msgRelease(int msq){
+    if(msgctl(msq, IPC_RMID, 0) < 0){
+        perror("msgctl failed");
+        exit(3);
+    }
+}
+
 int semGet(key_t key, int value){
     int ret;
     if((ret = semget(key, value, 0666 | IPC_CREAT)) == -1){
@@ -106,4 +113,15 @@ int semGetValue(int sid){
     return ret;
 }
 
+int semGetWaiting(int sid){
+    int ret;
+    errno = 0;
+    if((ret = semctl(sid, 0, GETNCNT)) == -1){
+        if(errno){
+            perror("semctl get failed");
+            exit(7);
+        }
+    }
+    return ret;
+}
 

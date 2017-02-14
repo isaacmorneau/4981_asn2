@@ -118,9 +118,15 @@ int main(int argc, char *argv[]){
     if(!(isClient || isServer)){
         isClient = 1;
     }
-    if(isClient && mkey == -1){
-        perror("invalid key. key must be a non zero integer");
-        exit(1);
+    if(isClient){
+        if(mkey == -1){
+            perror("invalid key. key must be a non zero integer");
+            exit(1);
+        }
+        if(!priority){
+            perror("priority must be specified");
+            exit(1);
+        }
     }
 
     msqId = msgGet(mkey, IPC_CREAT | 0660);
