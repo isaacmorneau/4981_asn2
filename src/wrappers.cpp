@@ -31,14 +31,16 @@ void msgSnd(int msq, const MsgBuff *msgbuff, int size, int flags){
 }
 
 int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read){
-    if((*read = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
+    int ret;
+    if((ret = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
         //no messages to read or an interupt stopped us
-        if(errno == ENOMSG || errno == EINTR) {
+        if(errno == ENOMSG || errno == EINTR || errno == 0) {
             return 0;
         }
         perror("msgrcv failed");
-        exit(5);
+        exit(errno);
     }
+    *read = ret;
     return 1;
 }
 

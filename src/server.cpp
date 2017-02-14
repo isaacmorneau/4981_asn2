@@ -16,9 +16,7 @@ using namespace std;
 //is the master still running?
 int sharedRunning = 1;
 //how many slaves are there
-int slaves = 0;
-//how many are ready to execute
-atomic<int> slavesReady(0);
+atomic<int> slaves(0);
 
 //to mannage locking and unlocking of slave servers
 //and to allow interupt to clean up resources
@@ -30,9 +28,17 @@ int verbose = 0;
 
 void interuptRequest(int signal){
     switch(signal){
+        case SIGUSR1:
+            //decrement total semaphores
+            //a slave is finished
+            --slaves;
+            break;
         case SIGINT:
             if(!sharedRunning)
                 return;
+            if(verbose)
+                printf("sw:%d sv:%d sl:%d\n",
+                        semGetWaiting(semId),semGetValue(semId),int(slaves));
             if(verbose)
                 printf("\n}Caught interupt, exiting.\n");
             sharedRunning = 0;
@@ -40,26 +46,6 @@ void interuptRequest(int signal){
             semRelease(semId);
             msgRelease(msgId);
             exit(0);
-            break;
-        case SIGUSR2:
-            //decrement total semaphores
-            --slaves;
-            break;
-        case SIGUSR1:
-            //a client says they are waiting
-            ++slavesReady;
-            //make sure someone is actually waiting
-            //we should never be off but if its too fast, spinlock until the slave waits
-            while(!semGetWaiting(semId));
-
-            //everyone is accounted for, proceed to unlock
-            if(slavesReady == slaves){
-                slavesReady = 0;
-                for(int i = 0; i < slaves; ++i)
-                    semSignal(semId);//be free!
-                if(verbose)
-                    printf("}released %d slaves\n", slaves);
-            }
             break;
     }
 }
@@ -83,22 +69,25 @@ void server(const int msgQueue, const key_t mkey, const int verb){
     sa.sa_handler = interuptRequest;
     //catch ^c cancel of server
     sigaction(SIGINT, &sa, 0);
-    //catch slave servers done messages
-    sigaction(SIGUSR1, &sa, 0);
     //catch slave finished messages
-    sigaction(SIGUSR2, &sa, 0);
+    sigaction(SIGUSR1, &sa, 0);
 
 
-    semId = semGet(mkey, 1);
+    semId = semGet(mkey, 2);
+    semSet(semId,1);
     //the queue is created in main so the client can share its creation
     //so instead of refetching just assign the id
     msgId = msgQueue;
 
     while(sharedRunning){
         //start off blocking but as soon as there are slave processes be sure to check on them
-        if(msgRcv(msgId, &msgBuff, BUFFSIZE, TO_SERVER, 0, &read)){
-
+        if(msgRcv(msgId, &msgBuff, BUFFSIZE, TO_SERVER, IPC_NOWAIT, &read)){
+            ++slaves;
             if(!fork()){
+                //clear what the master server is set to handle
+                sa.sa_handler = SIG_DFL;
+                sigaction(SIGINT, &sa, 0);
+                sigaction(SIGUSR1, &sa, 0);
                 //which file
                 char file[BUFFSIZE];
                 memset(file,0,BUFFSIZE);
@@ -108,13 +97,27 @@ void server(const int msgQueue, const key_t mkey, const int verb){
                 //if child, server functions as a slave
                 slaveServer(masterPid, file, clientPid, clientPriority);
                 //exit here so it doesnt delete the message queue by returning to main
-
                 exit(0);
-            } else {
-                ++slaves;
+            }
+        }
+        //make sure someone is actually waiting
+        //we should never be off but if its too fast, spinlock until the slave waits
+
+        //everyone is accounted for, proceed to unlock
+        if(slaves){
+            if(semGetWaiting(semId) >= slaves){
+            //might be needed
+            //while(!semGetWaiting(semId));
+                for(int i = 0; i < slaves; ++i)
+                    semSignal(semId);//be free!
+                if(verbose)
+                    printf("}released %d slaves\n", int(slaves));
             }
         }
     }
+    //if we get here first release them anyway so we dont litter
+    semRelease(semId);
+    msgRelease(msgId);
 }
 
 
@@ -139,7 +142,7 @@ void slaveServer(const int parentPid,
         msg.mtype = QUIT_CLIENT(clientPid);
         *msg.mtext = FILE_NOT_FOUND;
         msgSnd(msgId, &msg, 1);
-        kill(parentPid, SIGUSR2);
+        kill(parentPid, SIGUSR1);
         //dont exit with an error but do close this fork
         return;
     }
@@ -171,8 +174,6 @@ void slaveServer(const int parentPid,
         if(verbose)
             printf("<%d:[%d]\n", clientPid, clientPriority);
 
-        //notify master server that we have completed an itteration
-        kill(parentPid, SIGUSR1);
         //wait for the server to unblock semaphore
         semWait(semId);
     }
@@ -181,5 +182,6 @@ void slaveServer(const int parentPid,
     *msg.mtext = FILE_END;
     msgSnd(msgId, &msg, 1);
 
-    kill(parentPid, SIGUSR2);
+    kill(parentPid, SIGUSR1);
+    exit(0);
 }
