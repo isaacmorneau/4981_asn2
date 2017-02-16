@@ -10,8 +10,60 @@
 #include "headers/server.h"
 #include "headers/client.h"
 
+
 using namespace std;
 
+/**
+ *
+ * Function: main
+ *
+ *
+ * Date: 2017/02/07
+ *
+ *
+ * Designer: Isaac Morneau; A00958405
+ *
+ *
+ * Programmer: Isaac Morneau; A00958405
+ *
+ *
+ * Interface:
+ *      int main(
+ *          int argc,       - the number of parameters passed to the program
+ *          char *argv[]    - the parameters themselves
+ *          );
+ *
+ * Return: int the status that the program is exiting with
+ *
+ *
+ * Notes: This function handles the initialization of both the client and server parameters. Its primary purpos is 
+ *      to verify the parameters used for both client and server. Using getopts it iterates through the parameters
+ *      checking how the user wants to create either the client or the server and passing them to the right function
+ *      
+ *      if no parameters are specified it will print out the usage page
+ *      if -h is specified it will print out the usage page
+ *
+ *      The server can receive the following parameters
+ *          -s      [required] to run in server mode
+ *          -k arg  [required] the key to use for the message queue
+ *          -v      [optional] the server will print out information on what their doing
+ *      example:
+ *          $asn2 -s -k 1234 -v
+ *      
+ *      The client can receive the following parameters
+ *          -c      [required] to run as a client
+ *          -k arg  [required] the key to use for the message queue
+ *          -f arg  [required] the file to be requested
+ *          -p arg  [required] the priority to request. predefined constants are l, m, and h for low medium and high
+ *                              the priority can also be any positive integer if a greater range is desired.
+ *          -o arg  [optional] the file to write the response to. If not specified the response will be echoed to
+ *                              standard out so that it can be redirected or piped.
+ *          -v      [optional] the client will print out information on what its doing
+ *
+ *      example:
+ *          $asn2 -c -k 1234 -v -f /path/to/file -o /path/to/destination -p m
+ *
+ */
 int main(int argc, char *argv[]){
 
     int msqId;
@@ -22,7 +74,7 @@ int main(int argc, char *argv[]){
     //verify only one is specified
     int isClient = 0;
     int isServer = 0;
-    //priority of the client
+    //priority of the client default to invalid but only check if its a client
     int priority = 0;
 
     //a file must be entered if running as client
@@ -138,6 +190,5 @@ int main(int argc, char *argv[]){
     }
 
     // Remove he message queue
-    //msgCtl(msqId, IPC_RMID, 0);
     exit(0);
 }

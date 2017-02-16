@@ -34,9 +34,12 @@ int msgRcv(int msq, MsgBuff *msgbuff, int size, long type, int flags, int *read)
     int ret;
     if((ret = msgrcv(msq, reinterpret_cast<void*>(msgbuff), size, type, flags)) == -1){
         //no messages to read or an interupt stopped us
-        if(errno == ENOMSG || errno == EINTR || errno == 0) {
+        //ignore and continue
+        if(errno == ENOMSG || errno == EINTR || errno == 0)
             return 0;
-        }
+        //the actual resource was removed
+        if(errno == EIDRM)
+            return -1;
         perror("msgrcv failed");
         exit(errno);
     }
@@ -73,9 +76,6 @@ void semWait(int sid){
     buf[0].sem_op = -1;
     buf[0].sem_flg = 0;
 
-    //buf[1].sem_num = 0;
-    //buf[1].sem_op = 0;
-    //buf[1].sem_flg = 0;
     if(semop(sid, buf, 1) == -1){
         if(errno == EINTR)
             return;

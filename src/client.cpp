@@ -14,35 +14,54 @@ void client(const int msgQueue,
         const std::string& outFile, 
         const int priority, 
         const int verbose) {
+    //the buffer for sending the messages
     MsgBuff msg;
-    int read;
-    int pid = getpid();
+    //where should i write to
     ofstream oFile;
-    //was a file specified or should we output to terminal?
+    //who am i
+    int pid = getpid();
+    //how many was read in
+    int read = 0;
+    //checking the msgrcv return
+    int msgret = 0;
+
+    //was a file specified or should we output to stdout
     int useFile = outFile.size();
     if(useFile)
         oFile.open(outFile.c_str(), ios::binary | ios::app);
+    if(oFile.fail()){
+        perror("failed to open output file");
+        exit(2);
+    }
 
     msg.mtype = TO_SERVER;
 
     sprintf(msg.mtext, "%d %d %s", pid, priority, reqFile.c_str());
 
+    //send the length of the string + 1 for the null char
     msgSnd(msgQueue, &msg, strlen(msg.mtext) + 1);
     //load up the message loop into a lambda and throw it into a thread
-    thread msgWorker([&]{
-            while(1){
-                //while its sending us messages read them in
-                while(msgRcv(msgQueue, &msg, BUFFSIZE, pid, IPC_NOWAIT, &read)) {
+    thread([&]{
+            while(msgret != -1){
+                //while its sending us messages read them in without checking for control
+                while((msgret = msgRcv(msgQueue, &msg, BUFFSIZE, pid, IPC_NOWAIT, &read)) == 1) {
                     //write data to output
-                    if(useFile)
+                    if(useFile) {
                         oFile.write(msg.mtext, read);
-                    else
+                        if(oFile.fail()){
+                            oFile.close();
+                            if(verbose)
+                                printf("write failed, exiting...");
+                            exit(3);
+                        }
+                    } else {
                         //use fwrite because it may be a binary file
                         fwrite(msg.mtext, sizeof(char), read, stdout);
+                    }
                 }
-                //thats the last message on the queue
-                //non blocking check if the server is done with us
-                if(msgRcv(msgQueue, &msg, BUFFSIZE, QUIT_CLIENT(pid), IPC_NOWAIT, &read)){
+                //the queue doesnt have any more messages for us for now
+                //check to see if the server is needing to tell is something
+                if((msgret = msgRcv(msgQueue, &msg, BUFFSIZE, QUIT_CLIENT(pid), IPC_NOWAIT, &read)) == 1){
                     switch(*msg.mtext){
                         case FILE_NOT_FOUND:
                             if(verbose)
@@ -61,7 +80,9 @@ void client(const int msgQueue,
                     break;
                 }
             }
+            if(msgret == -1 && verbose)
+                printf("resource in use removed, exiting...\n");
         }
-    );
-    msgWorker.join();
+    ).join();
+    //no nead to clean up the message queue, the server will
 }
